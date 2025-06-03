@@ -1,18 +1,20 @@
-<!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>Pixelaid | Kudos</title>
-    <link href="https://fonts.googleapis.com/css?family=Nova+Square|VT323" rel="stylesheet">
-    <link rel="stylesheet" href="./stylesheets/style.css">
-    <link rel="stylesheet" href="./stylesheets/canvas.css">
-    <link rel="stylesheet" href="./stylesheets/questions.css">
+    <link
+      href="https://fonts.googleapis.com/css?family=Nova+Square|VT323"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./stylesheets/style.css" />
+    <link rel="stylesheet" href="./stylesheets/canvas.css" />
+    <link rel="stylesheet" href="./stylesheets/questions.css" />
   </head>
 
   <body class="container">
     <header>
       <div class="header-logo">
-        <a href="/"><img src="../media/pixelaid-logo.svg" alt=""></a>
+        <a href="/"><img src="../media/pixelaid-logo.svg" alt="" /></a>
       </div>
       <div class="nav-buttons">
         <a href="/canvas"><button type="button">CANVAS</button></a>
@@ -45,19 +47,19 @@
         <form action="/giveKudo" method="post">
           <div>
             <label for="from"></label>
-            <input type="hidden" name="from" value="{{data.name}}">
+            <input type="hidden" name="from" value="{{data.name}}" />
           </div>
           <div>
             <label for="body">Kudo Description</label>
-            <input type="text" name="body" value="">
+            <input type="text" name="body" value="" />
 
-              <label for="to">Give Kudo To:</label>
-              <select name="to">
-                {{#each user}}
+            <label for="to">Give Kudo To:</label>
+            <select name="to">
+              {{#each user}}
 
                 <option value="{{this.name}}">{{this.name}}</option>
-                {{/each}}
-              </select>
+              {{/each}}
+            </select>
 
           </div>
           <button>Give Kudo</button>
@@ -65,13 +67,19 @@
       </section>
     </main>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js">
+    <script
+      src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"
+    >
     </script>
     <!-- this is the CDN for jQuery -->
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js">
+    <script
+      src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+    >
     </script>
     <!-- cdn for bootstrap -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"
+    ></script>
     <script type="text/javascript" src="/main">
 
     </script>

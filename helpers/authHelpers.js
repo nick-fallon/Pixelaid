@@ -1,11 +1,11 @@
 const authMiddleware = {
   checkAuthentication(req, res, next) {
-    if(!req.user) {
-      req.session.flash = {}
-      req.flash('loginMessage', "Please log in first")
-      return res.redirect('/login');
+    if (!req.user) {
+      req.session.flash = {};
+      req.flash("loginMessage", "Please log in first");
+      return res.redirect("/login");
     } else {
-     return next();
+      return next();
     }
   },
   currentUser(req, res, next) {
@@ -20,22 +20,22 @@ const authMiddleware = {
     if (req.user) {
       return res.redirect(`/users`);
     } else {
-     return next();
+      return next();
     }
   },
-  ensureCorrectUser(req,res,next) {
-    if(+req.params.id !== req.user.id){
-      return res.redirect(`/users`)
+  ensureCorrectUser(req, res, next) {
+    if (+req.params.id !== req.user.id) {
+      return res.redirect(`/users`);
     } else {
       return next();
     }
   },
-  ensureCorrectUserForPost(req,res,next) {
-    if(+req.params.user_id !== req.user.id){
-      return res.redirect(`/users/${req.user.id}/posts`)
+  ensureCorrectUserForPost(req, res, next) {
+    if (+req.params.user_id !== req.user.id) {
+      return res.redirect(`/users/${req.user.id}/posts`);
     } else {
       return next();
     }
-  }
+  },
 };
 module.exports = authMiddleware;

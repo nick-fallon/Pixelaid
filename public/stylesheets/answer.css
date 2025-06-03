@@ -1,5 +1,5 @@
 .answer-body {
-  font-family: 'Nova Square', sans-serif;
+  font-family: "Nova Square", sans-serif;
 }
 
 .original-question {
@@ -12,14 +12,14 @@
   color: white;
   margin-left: 11px;
   padding: 7px 0;
-  font-family: 'VT323', sans-serif;
+  font-family: "VT323", sans-serif;
   font-size: 1.5em;
 }
 
 .original-question > h1 {
   margin-right: 17px;
   font-size: 2.5em;
-  font-family: 'VT323', sans-serif;
+  font-family: "VT323", sans-serif;
 }
 
 main {
@@ -50,7 +50,7 @@ main {
 .add-answer-container textarea {
   width: 91%;
   font-size: 1.5em;
-  font-family: 'Nova Square', sans-serif;
+  font-family: "Nova Square", sans-serif;
   margin: 11px 0;
 }
 
@@ -58,7 +58,7 @@ main {
   border: none;
   background-color: red;
   color: white;
-  font-family: 'VT323', sans-serif;
+  font-family: "VT323", sans-serif;
   font-size: 1.5em;
   padding: 3px 7px;
   cursor: pointer;

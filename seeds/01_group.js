@@ -1,19 +1,10 @@
-
-exports.seed = function(knex, Promise) {
-  // Deletes ALL existing entries
-  return knex('groups').del()
-    .then(function () {
-      // Inserts seed entries
-      return knex('groups').insert([
-        {
-          name: "g46"
-        },
-        {
-          name: "g46"
-        },
-        {
-          name: "g51"
-        }
-      ]);
-    });
+exports.seed = function (knex) {
+  return knex.transaction(async (trx) => {
+    await trx("groups").del();
+    await trx("groups").insert([
+      { name: "g46" },
+      { name: "g46" },
+      { name: "g51" },
+    ]);
+  });
 };

@@ -1,6 +1,6 @@
 .parallax {
   height: 100vh;
-  background-image: url('../media/mobile-background2.png');
+  background-image: url("../media/mobile-background2.png");
   background-size: cover;
   background-position: bottom;
   background-repeat: no-repeat;
@@ -44,7 +44,7 @@
 .signup-form input {
   width: 95%;
   font-size: 1.75em;
-  font-family: 'Nova Square', sans-serif;
+  font-family: "Nova Square", sans-serif;
   margin: 11px 0;
 }
 
@@ -59,21 +59,21 @@
 #signup-error {
   color: white;
   background-color: red;
-  font-family: 'VT323', sans-serif;
+  font-family: "VT323", sans-serif;
   font-size: 2.7em;
   padding: 7px;
   margin-top: 11px;
 }
 
-@media(min-width: 800) {
+@media (min-width: 800) {
   .parallax {
-    background-image: url('../media/tablet-background.png');
+    background-image: url("../media/tablet-background.png");
   }
 }
 
 @media (min-width: 1000px) {
   .parallax {
-    background-image: url('../media/desktop-background.png');
+    background-image: url("../media/desktop-background.png");
   }
 
   .logo-container {

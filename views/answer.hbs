@@ -1,17 +1,21 @@
-<!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>Pixelaid | Answers</title>
-    <link href="https://fonts.googleapis.com/css?family=Nova+Square|VT323" rel="stylesheet">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
-    <link rel="stylesheet" href="../stylesheets/canvas.css">
-    <link rel="stylesheet" href="../stylesheets/answer.css">
+    <link
+      href="https://fonts.googleapis.com/css?family=Nova+Square|VT323"
+      rel="stylesheet"
+    />
+    <script
+      src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"
+    ></script>
+    <link rel="stylesheet" href="../stylesheets/canvas.css" />
+    <link rel="stylesheet" href="../stylesheets/answer.css" />
   </head>
   <body class="answer-body">
     <header>
       <div class="header-logo">
-        <a href="/"><img src="../media/pixelaid-logo.svg" alt=""></a>
+        <a href="/"><img src="../media/pixelaid-logo.svg" alt="" /></a>
       </div>
       <div class="nav-buttons">
         <a href="/canvas"><button type="button">CANVAS</button></a>
@@ -30,7 +34,7 @@
     </section>
 
     <main>
-    <!-- <section>
+      <!-- <section>
       <a href="/questions">arrow</a>
       <div class="link row">
         <div class="col l3">
@@ -43,36 +47,50 @@
         </div>
       </div>
     </section> -->
-    <section class="add-answer-container">
-      <h3>ADD ANSWER. GET PIXELS.</h3>
-      {{#each data}}
-      <form action="/addAnswer/{{id}}" method="post">
-      {{/each}}
-        <!-- <label for="body">answer</label> -->
-        <!-- <input type="text" name="body" placeholder="ANSWER ME"> -->
-        <textarea name="body" rows="5" cols="60" placeholder="ANSWER ME"></textarea>
-        <button>Add answer</button>
-      </form>
-
-    </section>
-    <section class="answer-container">
-      {{#each data}}
-      <div class="link row answer-single">
-        <div class="vote-stuff">
-          <form method="post" href="/endorse/{{this.id}}" action="/endorse/{{this.id}}">
-            <button class="button"><i class="fa fa-heart fa-2x" aria-hidden="true"></i>
-            </button>
-            <input type="hidden" name="answer_id" value="{{this.answer_id}}">
-            <input type="hidden" name="votes" value="{{this.votes}}">
+      <section class="add-answer-container">
+        <h3>ADD ANSWER. GET PIXELS.</h3>
+        {{#each data}}
+          <form action="/addAnswer/{{id}}" method="post">
+            <textarea
+              name="body"
+              rows="5"
+              cols="60"
+              placeholder="ANSWER ME"
+            ></textarea>
+            <button>Add answer</button>
           </form>
-          <span class="votes">{{this.votes}}</span>
-        </div>
-        <p>{{this.answer_username}}</p>
-        <h3>{{this.answer_body}}</h3>
-      </div>
-      {{/each}}
+        {{/each}}
 
-    </section>
+      </section>
+      <section class="answer-container">
+        {{#each data}}
+          <div class="link row answer-single">
+            <div class="vote-stuff">
+              <form
+                method="post"
+                href="/endorse/{{this.id}}"
+                action="/endorse/{{this.id}}"
+              >
+                <button class="button"><i
+                    class="fa fa-heart fa-2x"
+                    aria-hidden="true"
+                  ></i>
+                </button>
+                <input
+                  type="hidden"
+                  name="answer_id"
+                  value="{{this.answer_id}}"
+                />
+                <input type="hidden" name="votes" value="{{this.votes}}" />
+              </form>
+              <span class="votes">{{this.votes}}</span>
+            </div>
+            <p>{{this.answer_username}}</p>
+            <h3>{{this.answer_body}}</h3>
+          </div>
+        {{/each}}
+
+      </section>
     </main>
 
     <script src="https://use.fontawesome.com/a620c1b288.js"></script>

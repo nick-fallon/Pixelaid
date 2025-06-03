@@ -1,17 +1,19 @@
-<!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>Pixelaid | Sign Up</title>
-    <link href="https://fonts.googleapis.com/css?family=Nova+Square|VT323" rel="stylesheet">
-    <link rel="stylesheet" href="./stylesheets/style.css">
-    <link rel="stylesheet" href="./stylesheets/signup.css">
+    <link
+      href="https://fonts.googleapis.com/css?family=Nova+Square|VT323"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./stylesheets/style.css" />
+    <link rel="stylesheet" href="./stylesheets/signup.css" />
   </head>
   <body class="parallax">
     <nav>
       <header>
         <div class="header-logo logo-container">
-          <a href="/"><img src="./media/pixelaid-logo.svg" alt=""></a>
+          <a href="/"><img src="./media/pixelaid-logo.svg" alt="" /></a>
         </div>
         <div class="header-nav-buttons">
 
@@ -22,14 +24,19 @@
     <div class="signup-form">
       <form action="/signup" method="post" required>
         <!-- <label for="name">Full Name</label> -->
-        <input type="text" name="name" placeholder="Full Name" required>
+        <input type="text" name="name" placeholder="Full Name" required />
         <!-- <label for="email">Email</label> -->
-        <input type="email" name="email" placeholder="Email" required>
+        <input type="email" name="email" placeholder="Email" required />
         <!-- <label for="username">Username</label> -->
-        <input type="text" name="username" placeholder="Username" required>
+        <input type="text" name="username" placeholder="Username" required />
         <!-- <label for="password">Password</label> -->
-        <input type="password" name="password" placeholder="Password" required>
-        <input type="submit" class="signup-button" value="Sign Up">
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          required
+        />
+        <input type="submit" class="signup-button" value="Sign Up" />
       </form>
       <h1 id="signup-error">{{error}}</h1>
     </div>

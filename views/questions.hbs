@@ -1,18 +1,20 @@
-<!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>Pixelaid | Questions</title>
-    <link href="https://fonts.googleapis.com/css?family=Nova+Square|VT323" rel="stylesheet">
-    <link rel="stylesheet" href="./stylesheets/style.css">
-    <link rel="stylesheet" href="./stylesheets/canvas.css">
-    <link rel="stylesheet" href="./stylesheets/questions.css">
+    <link
+      href="https://fonts.googleapis.com/css?family=Nova+Square|VT323"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./stylesheets/style.css" />
+    <link rel="stylesheet" href="./stylesheets/canvas.css" />
+    <link rel="stylesheet" href="./stylesheets/questions.css" />
   </head>
 
   <body class="container">
     <header>
       <div class="header-logo">
-        <a href="/"><img src="../media/pixelaid-logo.svg" alt=""></a>
+        <a href="/"><img src="../media/pixelaid-logo.svg" alt="" /></a>
       </div>
       <div class="nav-buttons">
         <a href="/canvas"><button type="button">CANVAS</button></a>
@@ -25,41 +27,52 @@
     <main>
       <div class="question-container">
 
-      {{#each data}}
-        <div class="questionOuterBox">
-          <div class="question-text">
-            <span class="title">
-              <h1>{{this.title}}</h1>
-              <h4>{{this.body}}</h4>
-            </span>
+        {{#each data}}
+          <div class="questionOuterBox">
+            <div class="question-text">
+              <span class="title">
+                <h1>{{this.title}}</h1>
+                <h4>{{this.body}}</h4>
+              </span>
+            </div>
+            <div class="question-buttons">
+              <a href="/answer/{{id}}"><button>Answers</button></a>
+              <a href="/delete/{{this.id}}"><button>Delete</button></a>
+            </div>
           </div>
-          <div class="question-buttons">
-            <a href="/answer/{{id}}"><button>Answers</button></a>
-            <a href="/delete/{{this.id}}"><button>Delete</button></a>
-          </div>
-        </div>
-      {{/each}}
+        {{/each}}
 
       </div>
 
       <section class="addQuestion">
         <h2>ADD NEW QUESTION</h2>
         <form action="/add-questions" method="post">
-          <input type="text" name="title" placeholder="TITLE">
-          <textarea name="body" rows="7" cols="51" placeholder="TELL ME MORE..."></textarea>
+          <input type="text" name="title" placeholder="TITLE" />
+          <textarea
+            name="body"
+            rows="7"
+            cols="51"
+            placeholder="TELL ME MORE..."
+          ></textarea>
           <!-- <input type="text" name="body" placeholder="DETAILS"> -->
           <button>Add Question</button>
         </form>
       </section>
     </main>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js">
+    <script
+      src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"
+    >
     </script>
     <!-- this is the CDN for jQuery -->
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js">
+    <script
+      src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+    >
     </script>
     <!-- cdn for bootstrap -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"
+    ></script>
     <!-- <script type="text/javascript" src="/main"></script> -->
   </body>
 </html>

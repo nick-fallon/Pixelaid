@@ -32,7 +32,7 @@ main {
   border: none;
   background-color: red;
   color: white;
-  font-family: 'VT323', sans-serif;
+  font-family: "VT323", sans-serif;
   font-size: 1.5em;
   padding: 3px 7px;
   cursor: pointer;
@@ -58,10 +58,11 @@ main {
   align-items: center;
 }
 
-.addQuestion input, .addQuestion textarea {
+.addQuestion input,
+.addQuestion textarea {
   width: 87%;
   font-size: 1.5em;
-  font-family: 'Nova Square', sans-serif;
+  font-family: "Nova Square", sans-serif;
   margin: 11px 0;
 }
 
@@ -69,7 +70,7 @@ main {
   border: none;
   background-color: red;
   color: white;
-  font-family: 'VT323', sans-serif;
+  font-family: "VT323", sans-serif;
   font-size: 1.5em;
   padding: 3px 7px;
   cursor: pointer;
@@ -81,7 +82,7 @@ main {
 }
 
 .row {
-  border: .5px solid black;
+  border: 0.5px solid black;
 }
 
 .votes {
