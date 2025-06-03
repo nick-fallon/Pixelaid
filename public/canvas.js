@@ -61,7 +61,7 @@ $(document).ready(function () {
     //change color of section pixels and update the selected Array
     $("#modalCanvas").click(function (event) {
       if (event.target.classList.contains("editPixel")) {
-        if (userPixel > 0 && pixelsUsed < userPixel) {
+        if (userPixels > 0 && pixelsUsed < userPixels) {
           let yy = event.target.getAttribute("y");
           let xx = event.target.getAttribute("x");
           if (event.target.style.backgroundColor != selectedColor) {
@@ -141,18 +141,25 @@ function drawSection(arr, pos) {
   modalCanvas.empty();
   palette.empty();
   let tempPixel = $("#userPixels").text();
-  userPixel = +tempPixel;
+  userPixels = +tempPixel;
 
-  for (let i = 2; i < arr.length; i++) {
-    for (let n = 0; n < arr[i].length; n++) {
-      let tempDiv = document.createElement("div");
-      tempDiv.className = "editPixel";
-      tempDiv.style.backgroundColor = getColor(arr[i][n]);
-      tempDiv.setAttribute("y", i);
-      tempDiv.setAttribute("x", n);
-      modalCanvas.append(tempDiv);
+  // Create a 16x16 grid of pixels
+  for (let i = 0; i < 16; i++) {
+    let rowKey = "row_" + i;
+    let rowData = arr[rowKey];
+    if (rowData) {
+      for (let n = 0; n < rowData.length; n++) {
+        let tempDiv = document.createElement("div");
+        tempDiv.className = "editPixel";
+        tempDiv.style.backgroundColor = getColor(rowData[n]);
+        tempDiv.setAttribute("y", rowKey);
+        tempDiv.setAttribute("x", n);
+        modalCanvas.append(tempDiv);
+      }
     }
   }
+
+  // Create color palette
   for (let i = 0; i < colors.length; i++) {
     let colorDiv = document.createElement("div");
     colorDiv.className = "color";
@@ -182,15 +189,18 @@ function unpack(arr) {
   return tempArr;
 }
 
-//repackage the sectiona array into an object to be sent to database
+//repackage the section array into an object to be sent to database
 function pack(arr, pos) {
   let newObj = {};
   newObj["id"] = pos;
   newObj["canvas_id"] = 1;
-  for (var i = 0; i < arr.length - 2; i++) {
-    newObj[i] = arr[i + 2].reduce(function (acc, val) {
-      return acc + val;
-    });
+  
+  // Pack each row of pixels
+  for (let i = 0; i < 16; i++) {
+    let rowKey = "row_" + i;
+    if (arr[rowKey]) {
+      newObj[i] = arr[rowKey].join('');
+    }
   }
   return newObj;
 }
@@ -216,12 +226,13 @@ function getId(pos) {
 
 //copy the array into a NEW copy
 function copyArr(arr) {
-  let newArr = [];
-
-  for (let i = 0; i < arr.length; i++) {
-    newArr[i] = [];
-    for (let n = 0; n < arr[i].length; n++) {
-      newArr[i][n] = arr[i][n];
+  let newArr = {};
+  
+  // Copy each row
+  for (let i = 0; i < 16; i++) {
+    let rowKey = "row_" + i;
+    if (arr[rowKey]) {
+      newArr[rowKey] = arr[rowKey].split('');
     }
   }
   return newArr;
