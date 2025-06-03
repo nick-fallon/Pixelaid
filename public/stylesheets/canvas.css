@@ -74,16 +74,21 @@ header {
 
 .pixel {
   box-sizing: border-box;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  width: calc(100% / 16) !important;
+  height: calc(100% / 16) !important;
+  background-color: white;
 }
 
 .section {
   display: flex;
   flex-wrap: wrap;
-  box-sizing: content-box;
+  box-sizing: border-box;
   color: transparent;
   position: relative;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  width: calc(25% - 2px);
+  height: calc(20% - 2px);
+  margin: 1px;
+  background-color: white;
 }
 
 .section:hover {
@@ -96,14 +101,13 @@ header {
 }
 
 #canvasFrame {
-  border: 1px solid black;
+  border: 1px solid #eee;
   display: flex;
   flex-wrap: wrap;
-  min-width: 640px;
-  max-width: 640px;
-  min-height: 384px;
-  max-height: 384px;
-  box-sizing: content-box;
+  width: 640px;
+  height: 384px;
+  box-sizing: border-box;
+  background-color: white;
 }
 
 .canvas-page-content {

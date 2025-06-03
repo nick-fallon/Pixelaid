@@ -1,6 +1,6 @@
 var sectionSize = 128,
-  sectionRows = 3,
-  sectionCols = 5,
+  sectionRows = 5,
+  sectionCols = 4,
   modalUp = false,
   userPixels = 0,
   pixelsUsed = 0,
@@ -107,27 +107,31 @@ $(document).ready(function () {
 //initialize the canvas from DB
 function drawCanvas(arr) {
   let canvas = $("#canvasFrame");
-  for (let foo in arr) {
-    let tempSection = document.createElement("div");
-    tempSection.style.width = sectionSize + "px";
-    tempSection.style.height = sectionSize + "px";
-    tempSection.className = "section";
-    tempSection.id = foo;
-    tempSection.innerHTML = "<p class='posP'>" + foo + "</p>";
-    canvas.append(tempSection);
-    
-    // Create pixels for each row in the section
-    for (let i = 0; i < 16; i++) {
-      let rowKey = "row_" + i;
-      let rowData = arr[foo][rowKey];
-      if (rowData) {
-        for (let n = 0; n < rowData.length; n++) {
-          let tempPixel = document.createElement("div");
-          tempPixel.className = "pixel";
-          tempPixel.style.width = sectionSize / 16 + "px";
-          tempPixel.style.height = sectionSize / 16 + "px";
-          tempPixel.style.backgroundColor = getColor(rowData[n]);
-          tempSection.append(tempPixel);
+  
+  // Create all sections first
+  for (let y = 0; y < sectionRows; y++) {
+    for (let x = 0; x < sectionCols; x++) {
+      let pos = y + "," + x;
+      let tempSection = document.createElement("div");
+      tempSection.className = "section";
+      tempSection.id = pos;
+      tempSection.innerHTML = "<p class='posP'>" + pos + "</p>";
+      canvas.append(tempSection);
+      
+      // If we have data for this section, fill it with pixels
+      if (arr[pos]) {
+        // Create pixels for each row in the section
+        for (let i = 0; i < 16; i++) {
+          let rowKey = "row_" + i;
+          let rowData = arr[pos][rowKey];
+          if (rowData) {
+            for (let n = 0; n < rowData.length; n++) {
+              let tempPixel = document.createElement("div");
+              tempPixel.className = "pixel";
+              tempPixel.style.backgroundColor = getColor(rowData[n]);
+              tempSection.append(tempPixel);
+            }
+          }
         }
       }
     }
@@ -180,11 +184,25 @@ function selectColor(color) {
 //unpack the data from its string form
 function unpack(arr) {
   let tempArr = {};
+  
+  // We have a 4x5 grid (4 columns, 5 rows)
+  // arr contains objects with id 1-20
   for (let i = 0; i < arr.length; i++) {
-    let y = Math.floor(i / sectionCols);
-    let x = i % sectionCols;
+    let section = arr[i];
+    let id = section.id;
+    
+    // Convert database ID (1-20) to grid position (0-based)
+    // For a 4x5 grid (reading left to right, top to bottom):
+    // Row 0: IDs 1-4   (x: 0-3, y: 0)
+    // Row 1: IDs 5-8   (x: 0-3, y: 1)
+    // Row 2: IDs 9-12  (x: 0-3, y: 2)
+    // Row 3: IDs 13-16 (x: 0-3, y: 3)
+    // Row 4: IDs 17-20 (x: 0-3, y: 4)
+    let y = Math.floor((id - 1) / sectionCols);
+    let x = (id - 1) % sectionCols;
+    
     let pos = y + "," + x;
-    tempArr[pos] = arr[i];
+    tempArr[pos] = section;
   }
   return tempArr;
 }
@@ -215,13 +233,9 @@ function getId(pos) {
       stringB = pos.substring(i + 1, pos.length);
     }
   }
-  if (stringA === "0") {
-    return +stringB + 1;
-  } else if (stringA === "1") {
-    return +stringB + 6;
-  } else if (stringA === "2") {
-    return +stringB + 11;
-  }
+  // Convert grid position back to section ID (1-20)
+  // Row number (y) * columns per row (4) + column number (x) + 1
+  return (+stringA * sectionCols) + (+stringB + 1);
 }
 
 //copy the array into a NEW copy
