@@ -84,25 +84,25 @@ app.get("/signuperror", (req, res) => {
 });
 
 app.post("/signup", (req, res) => {
-  bcrypt.genSalt(saltRounds).then((salt) => {
-    bcrypt
-      .hash(req.body.password, salt)
-      .then((hash) => {
-        return pg("users").insert({
-          username: req.body.username,
-          password: hash,
-          email: req.body.email,
-          name: req.body.name,
-          pixel_count: 31,
-        });
-      })
-      .catch((err) => {
-        res.redirect("/signuperror");
-      })
-      .then(() => {
-        res.redirect("/");
+  bcrypt
+    .genSalt(saltRounds)
+    .then((salt) => bcrypt.hash(req.body.password, salt))
+    .then((hash) => {
+      return pg("users").insert({
+        username: req.body.username,
+        password: hash,
+        email: req.body.email,
+        name: req.body.name,
+        pixel_count: 31,
       });
-  });
+    })
+    .then(() => {
+      res.redirect("/");
+    })
+    .catch((err) => {
+      console.error("signup error:", err && err.message ? err.message : err);
+      res.redirect("/signuperror");
+    });
 });
 
 var currentUser = { name: "Guest", pixel_count: 0 };
