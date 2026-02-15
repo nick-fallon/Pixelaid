@@ -23,14 +23,18 @@ const app = express();
 const port = process.env.PORT || 5001;
 const saltRounds = 10;
 const sseClients = new Set();
+const EDIT_KEY = process.env.EDIT_KEY || "";
+const MAX_CANVAS_JSON_BYTES = 25000;
+const rateBuckets = new Map();
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "hbs");
+app.set("trust proxy", 1);
 
 app.use(logger("dev"));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json({ limit: "200kb" }));
+app.use(bodyParser.urlencoded({ extended: false, limit: "200kb" }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -114,6 +118,48 @@ function parseUpdatePayload(body) {
   }
 }
 
+function getClientKey(req) {
+  if (req.headers["x-edit-key"]) return String(req.headers["x-edit-key"]);
+  if (req.body && req.body.edit_key) return String(req.body.edit_key);
+  if (req.query && req.query.edit_key) return String(req.query.edit_key);
+  return "";
+}
+
+function requireEditKey(req, res, next) {
+  if (!EDIT_KEY) return next();
+  if (getClientKey(req) !== EDIT_KEY) {
+    return res.status(403).json({ error: "Edit key required" });
+  }
+  return next();
+}
+
+function validateJsonFieldSize(maxBytes) {
+  return function (req, res, next) {
+    let raw = req.body && req.body.json;
+    if (raw && Buffer.byteLength(String(raw), "utf8") > maxBytes) {
+      return res.status(413).json({ error: "Payload too large" });
+    }
+    return next();
+  };
+}
+
+function createRateLimiter({ windowMs, maxRequests }) {
+  return function (req, res, next) {
+    let key = (req.ip || "unknown") + ":" + req.path;
+    let now = Date.now();
+    let bucket = rateBuckets.get(key);
+    if (!bucket || now - bucket.start > windowMs) {
+      bucket = { start: now, count: 0 };
+      rateBuckets.set(key, bucket);
+    }
+    bucket.count += 1;
+    if (bucket.count > maxRequests) {
+      return res.status(429).json({ error: "Too many requests" });
+    }
+    return next();
+  };
+}
+
 function normalizeSectionForBroadcast(section) {
   let normalized = {
     id: Number(section.id),
@@ -180,7 +226,12 @@ app.get("/data", (req, res) => {
   });
 });
 
-app.post("/previewPixel", (req, res) => {
+app.post(
+  "/previewPixel",
+  createRateLimiter({ windowMs: 10 * 1000, maxRequests: 180 }),
+  requireEditKey,
+  validateJsonFieldSize(MAX_CANVAS_JSON_BYTES),
+  (req, res) => {
   let payload;
   try {
     payload = JSON.parse(req.body.json || "{}");
@@ -201,7 +252,12 @@ app.post("/previewPixel", (req, res) => {
   res.status(200).json({ ok: true });
 });
 
-app.post("/previewReset", (req, res) => {
+app.post(
+  "/previewReset",
+  createRateLimiter({ windowMs: 10 * 1000, maxRequests: 80 }),
+  requireEditKey,
+  validateJsonFieldSize(MAX_CANVAS_JSON_BYTES),
+  (req, res) => {
   let payload;
   try {
     payload = JSON.parse(req.body.json || "{}");
@@ -219,7 +275,12 @@ app.post("/previewReset", (req, res) => {
 });
 
 //update the canvas DB
-app.post("/updateCanvas", (req, res) => {
+app.post(
+  "/updateCanvas",
+  createRateLimiter({ windowMs: 60 * 1000, maxRequests: 40 }),
+  requireEditKey,
+  validateJsonFieldSize(MAX_CANVAS_JSON_BYTES),
+  (req, res) => {
   let parsedPayload = parseUpdatePayload(req.body);
   if (!parsedPayload) {
     return sendUpdateResponse(req, res, 400, { error: "Invalid canvas update payload" });
@@ -247,7 +308,11 @@ app.post("/updateCanvas", (req, res) => {
     });
 });
 
-app.post("/clearCanvas", (req, res) => {
+app.post(
+  "/clearCanvas",
+  createRateLimiter({ windowMs: 60 * 1000, maxRequests: 6 }),
+  requireEditKey,
+  (req, res) => {
   query
     .clearCanvas()
     .then((sections) => {

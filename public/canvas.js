@@ -68,8 +68,28 @@ var stampSize = $("#stampSize");
 var emojiScale = $("#emojiScale");
 var colorDiv = $("#colorDiv");
 
+function initEditKeyFromUrl() {
+  let params = new URLSearchParams(window.location.search);
+  let key = params.get("edit_key");
+  if (!key) return;
+  window.localStorage.setItem("pixelaid_edit_key", key);
+  params.delete("edit_key");
+  let nextQuery = params.toString();
+  let nextUrl = window.location.pathname + (nextQuery ? "?" + nextQuery : "");
+  window.history.replaceState({}, "", nextUrl);
+}
+
+function withEditKey(payload) {
+  let key = window.localStorage.getItem("pixelaid_edit_key");
+  if (key) {
+    return Object.assign({}, payload, { edit_key: key });
+  }
+  return payload;
+}
+
 //on document ready
 $(document).ready(function () {
+  initEditKeyFromUrl();
   $.get("/data").then(function (data) {
     var fullPic = unpack(data);
     drawCanvas(fullPic);
@@ -164,9 +184,7 @@ $(document).ready(function () {
         section: newData,
         pixels: pixelsUsed,
       };
-      $.post("/updateCanvas", {
-        json: JSON.stringify(payload),
-      }).done(function () {
+      $.post("/updateCanvas", withEditKey({ json: JSON.stringify(payload) })).done(function () {
         if (Number.isFinite(userPixels)) {
           let remainingPixels = Math.max(userPixels - pixelsUsed, 0);
           $("#userPixels").text(remainingPixels);
@@ -192,7 +210,7 @@ $(document).ready(function () {
 
     $("#clearBoardBtn").click(function () {
       if (!window.confirm("Clear the whole board for everyone?")) return;
-      $.post("/clearCanvas").fail(function () {
+      $.post("/clearCanvas", withEditKey({})).fail(function () {
         console.error("Unable to clear board");
       });
     });
@@ -676,12 +694,15 @@ function sendPreviewPixel(sectionId, rowKey, x, char) {
     x: x,
     char: char,
   };
-  $.post("/previewPixel", { json: JSON.stringify(payload) });
+  $.post("/previewPixel", withEditKey({ json: JSON.stringify(payload) }));
 }
 
 function sendPreviewReset(sectionId, sectionRowsObj) {
   let section = pack(sectionRowsObj, sectionId);
-  $.post("/previewReset", { json: JSON.stringify({ section: section }) });
+  $.post(
+    "/previewReset",
+    withEditKey({ json: JSON.stringify({ section: section }) }),
+  );
 }
 
 //post the current selectedArr to the database
