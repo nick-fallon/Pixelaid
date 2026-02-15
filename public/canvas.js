@@ -1,12 +1,15 @@
 var sectionSize = 128,
-  sectionRows = 3,
-  sectionCols = 5,
+  sectionRows = 5,
+  sectionCols = 4,
   modalUp = false,
   userPixels = 0,
   pixelsUsed = 0,
   sectionArr = [],
+  originalSectionArr = [],
+  liveEditTimers = {},
   sectionId = "",
   sectionPos = "",
+  isPainting = false,
   selectedColor = "rgb(255, 255, 255)";
 
 var colors = [
@@ -27,9 +30,42 @@ var colors = [
   "H",
   "L",
 ];
+var stampEmojis = [
+  "⭐",
+  "❤️",
+  "🔥",
+  "✨",
+  "😂",
+  "😍",
+  "🤯",
+  "😎",
+  "🤖",
+  "🧠",
+  "🌈",
+  "🍕",
+  "🎉",
+  "🪩",
+  "🦄",
+  "⚡",
+  "💎",
+  "🎨",
+  "🚀",
+];
+var STAMP_KEY_POOL =
+  "0123456789abcdefghijklmnopqrstuvwxyz!@#$%^&*()_+-=[]{};:,.<>/?~|CFIJKNQUXZ";
+var stampMetaByKey = {};
+var stampKeyByEmojiAndScale = {};
+buildStampMaps();
+
+var selectedStampEmoji = null;
+var selectedStampSize = 1;
+var selectedEmojiScale = 1;
 var modal = document.getElementById("myModal");
 var modalCanvas = $("#modalCanvas");
 var palette = $("#palette");
+var stampPalette = $("#stampPalette");
+var stampSize = $("#stampSize");
+var emojiScale = $("#emojiScale");
 var colorDiv = $("#colorDiv");
 
 //on document ready
@@ -37,67 +73,136 @@ $(document).ready(function () {
   $.get("/data").then(function (data) {
     var fullPic = unpack(data);
     drawCanvas(fullPic);
+    connectRealtime(fullPic);
 
     //click on section to open modal edit window
     $("#canvasFrame").click(function (event) {
-      let secDiv = event.target.parentElement;
-      if (secDiv.classList.contains("section")) {
-        modalUp = true;
-        sectionPos = secDiv.id;
-        sectionId = getId(sectionPos);
-        sectionArr = copyArr(fullPic[secDiv.id]);
-        modal.style.display = "flex";
-        drawSection(sectionArr, sectionId);
-        selectColor(selectedColor);
-      }
+      let secDiv = event.target.closest(".section");
+      if (!secDiv) return;
+
+      modalUp = true;
+      pixelsUsed = 0;
+      sectionPos = secDiv.id;
+      sectionId = getId(sectionPos);
+      let sourceSection = getSectionStateFromCanvas(sectionPos, sectionId) || ensureSection(fullPic[sectionPos], sectionId);
+      fullPic[sectionPos] = sourceSection;
+      sectionArr = copyArr(sourceSection);
+      originalSectionArr = copyArr(sourceSection);
+      modal.style.display = "flex";
+      drawSection(sectionArr, sectionId);
+      selectColor(selectedColor);
     });
 
     //change selected color
     $("#palette").click(function (event) {
-      selectedColor = event.target.style.backgroundColor;
-      selectColor(event.target.style.backgroundColor);
+      if (!event.target.classList.contains("color")) return;
+      selectedColor = window.getComputedStyle(event.target).backgroundColor;
+      selectedStampEmoji = null;
+      stampPalette.find(".stamp").removeClass("selected-stamp");
+      selectColor(selectedColor);
     });
 
-    //change color of section pixels and update the selected Array
-    $("#modalCanvas").click(function (event) {
-      if (event.target.classList.contains("editPixel")) {
-        if (userPixel > 0 && pixelsUsed < userPixel) {
-          let yy = event.target.getAttribute("y");
-          let xx = event.target.getAttribute("x");
-          if (event.target.style.backgroundColor != selectedColor) {
-            sectionArr[yy][xx] = getChar(selectedColor);
-            event.target.style.backgroundColor = selectedColor;
-            pixelsUsed += 1;
-            $("#spendPixels").text(pixelsUsed);
-          }
-        } else {
-          console.log("Modal Error");
-        }
-      }
+    $("#stampPalette").click(function (event) {
+      let stampEl = event.target.closest(".stamp");
+      if (!stampEl) return;
+      stampPalette.find(".stamp").removeClass("selected-stamp");
+      stampEl.classList.add("selected-stamp");
+      selectedStampEmoji = stampEl.getAttribute("data-emoji");
+      selectColor(selectedColor);
+    });
+
+    $("#stampSize").change(function () {
+      let size = Number($(this).val());
+      selectedStampSize = Number.isFinite(size) && size >= 1 && size <= 3 ? size : 1;
+    });
+
+    $("#emojiScale").change(function () {
+      let size = Number($(this).val());
+      selectedEmojiScale = Number.isFinite(size) && size >= 1 && size <= 4 ? size : 1;
+      selectColor(selectedColor);
+    });
+
+    //paint modal pixels by click/drag (mouse, stylus, touch)
+    $("#modalCanvas").on("pointerdown", ".editPixel", function (event) {
+      isPainting = true;
+      event.preventDefault();
+      paintModalPixel(event.target);
+    });
+
+    $("#modalCanvas").on("pointerenter", ".editPixel", function () {
+      if (!isPainting) return;
+      paintModalPixel(this);
+    });
+
+    $(document).on("pointerup pointercancel", function () {
+      isPainting = false;
     });
 
     //cancel button on modal window
     $("#modalCancel").click(function () {
       modalUp = false;
+      renderSectionPreview(sectionPos, originalSectionArr);
+      sendPreviewReset(sectionId, originalSectionArr);
       modal.style.display = "none";
       modalCanvas.empty();
       palette.empty();
+      stampPalette.empty();
+      stampPalette.find(".stamp").removeClass("selected-stamp");
+      selectedStampEmoji = null;
+      selectedStampSize = 1;
+      selectedEmojiScale = 1;
+      stampSize.val("1");
+      emojiScale.val("1");
       selectedColor = "rgb(255, 255, 255)";
     });
 
     //submit edited section to the DB canvas
     $("#modalSubmit").click(function () {
+      fullPic[sectionPos] = packSectionForState(sectionArr, sectionId);
       let newData = pack(sectionArr, sectionId);
-      PostObjectToUrl("/updateCanvas", {
+      let payload = {
         section: newData,
         pixels: pixelsUsed,
+      };
+      $.post("/updateCanvas", {
+        json: JSON.stringify(payload),
+      }).done(function () {
+        if (Number.isFinite(userPixels)) {
+          let remainingPixels = Math.max(userPixels - pixelsUsed, 0);
+          $("#userPixels").text(remainingPixels);
+          $("#user-pixel").text("You have " + remainingPixels + " pixels");
+        }
+        originalSectionArr = copyArr(packSectionForState(sectionArr, sectionId));
+        pixelsUsed = 0;
+        modalUp = false;
+        modal.style.display = "none";
+        modalCanvas.empty();
+        palette.empty();
+        stampPalette.empty();
+        selectedStampEmoji = null;
+        selectedStampSize = 1;
+        selectedEmojiScale = 1;
+        stampSize.val("1");
+        emojiScale.val("1");
+        selectedColor = "rgb(255, 255, 255)";
+      }).fail(function () {
+        console.error("Unable to submit canvas update");
+      });
+    });
+
+    $("#clearBoardBtn").click(function () {
+      if (!window.confirm("Clear the whole board for everyone?")) return;
+      $.post("/clearCanvas").fail(function () {
+        console.error("Unable to clear board");
       });
     });
 
     //clear the edits, array, and pixels used in the section
     $("#modalClear").click(function () {
-      sectionArr = copyArr(fullPic[sectionPos]);
-      drawSection(sectionArr, sectionPos);
+      sectionArr = copyArr(originalSectionArr);
+      renderSectionPreview(sectionPos, sectionArr);
+      sendPreviewReset(sectionId, sectionArr);
+      drawSection(sectionArr, sectionId);
       pixelsUsed = 0;
       $("#spendPixels").text(pixelsUsed);
     });
@@ -107,31 +212,120 @@ $(document).ready(function () {
 //initialize the canvas from DB
 function drawCanvas(arr) {
   let canvas = $("#canvasFrame");
-  for (let foo in arr) {
-    let tempSection = document.createElement("div");
-    tempSection.style.width = sectionSize + "px";
-    tempSection.style.height = sectionSize + "px";
-    tempSection.className = "section";
-    tempSection.id = foo;
-    tempSection.innerHTML = "<p class='posP'>" + foo + "</p>";
-    canvas.append(tempSection);
-    
-    // Create pixels for each row in the section
-    for (let i = 0; i < 16; i++) {
-      let rowKey = "row_" + i;
-      let rowData = arr[foo][rowKey];
-      if (rowData) {
+  canvas.empty();
+
+  // Create all sections first
+  for (let y = 0; y < sectionRows; y++) {
+    for (let x = 0; x < sectionCols; x++) {
+      let pos = y + "," + x;
+      let tempSection = document.createElement("div");
+      tempSection.className = "section";
+      tempSection.id = pos;
+      canvas.append(tempSection);
+
+      // Always render a full 16x16 preview so every section looks interactive.
+      let section = ensureSection(arr[pos], getId(pos));
+      arr[pos] = section;
+      for (let i = 0; i < 16; i++) {
+        let rowKey = "row_" + i;
+        let rowData = section[rowKey];
         for (let n = 0; n < rowData.length; n++) {
           let tempPixel = document.createElement("div");
           tempPixel.className = "pixel";
-          tempPixel.style.width = sectionSize / 16 + "px";
-          tempPixel.style.height = sectionSize / 16 + "px";
-          tempPixel.style.backgroundColor = getColor(rowData[n]);
+          setPixelVisual(tempPixel, rowData[n]);
           tempSection.append(tempPixel);
         }
       }
     }
   }
+}
+
+function connectRealtime(fullPic) {
+  if (!window.EventSource) return;
+
+  let stream = new EventSource("/events");
+  stream.onmessage = function (event) {
+    let message;
+    try {
+      message = JSON.parse(event.data);
+    } catch (error) {
+      return;
+    }
+
+    if (message.type === "canvas_update" && message.section) {
+      applyRemoteSection(fullPic, message.section);
+      clearSectionLiveIndicator(message.section.id);
+      flashSectionById(message.section.id);
+      return;
+    }
+
+    if (message.type === "canvas_preview") {
+      applyRemotePreview(fullPic, message);
+      return;
+    }
+
+    if (message.type === "canvas_preview_reset" && message.section) {
+      applyRemoteSection(fullPic, message.section);
+      clearSectionLiveIndicator(message.section.id);
+      return;
+    }
+
+    if (message.type === "canvas_cleared" && Array.isArray(message.sections)) {
+      let fresh = unpack(message.sections);
+      for (let key in fullPic) {
+        delete fullPic[key];
+      }
+      Object.assign(fullPic, fresh);
+      drawCanvas(fullPic);
+      modalUp = false;
+      modal.style.display = "none";
+    }
+  };
+}
+
+function paintModalPixel(pixelEl) {
+  if (!pixelEl || !pixelEl.classList.contains("editPixel")) return;
+  if (pixelsUsed >= userPixels) return;
+
+  let yy = Number(String(pixelEl.getAttribute("y")).replace("row_", ""));
+  let xx = Number(pixelEl.getAttribute("x"));
+  if (!Number.isFinite(yy) || !Number.isFinite(xx)) return;
+  let nextChar = selectedStampEmoji
+    ? getStampKey(selectedStampEmoji, selectedEmojiScale)
+    : getChar(selectedColor);
+  let size = selectedStampEmoji ? selectedStampSize : 1;
+  let changed = applyBrushAt(yy, xx, size, nextChar);
+  if (changed > 0) {
+    $("#spendPixels").text(pixelsUsed);
+  }
+}
+
+function applyBrushAt(centerY, centerX, brushSize, nextChar) {
+  let changed = 0;
+  let startY = centerY - Math.floor((brushSize - 1) / 2);
+  let startX = centerX - Math.floor((brushSize - 1) / 2);
+
+  for (let y = startY; y < startY + brushSize; y++) {
+    for (let x = startX; x < startX + brushSize; x++) {
+      if (y < 0 || y > 15 || x < 0 || x > 15) continue;
+      if (pixelsUsed >= userPixels) return changed;
+
+      let rowKey = "row_" + y;
+      let currentChar = sectionArr[rowKey][x];
+      if (currentChar === nextChar) continue;
+
+      sectionArr[rowKey][x] = nextChar;
+      let modalCell = modalCanvas[0].querySelector(
+        '.editPixel[y="' + rowKey + '"][x="' + x + '"]',
+      );
+      if (modalCell) setPixelVisual(modalCell, nextChar);
+      paintMainCanvasChar(sectionPos, rowKey, x, nextChar);
+      sendPreviewPixel(sectionId, rowKey, x, nextChar);
+      pixelsUsed += 1;
+      changed += 1;
+    }
+  }
+  return changed;
 }
 
 //create single selected section with color palette
@@ -140,25 +334,45 @@ function drawSection(arr, pos) {
   $("#spendPixels").text(pixelsUsed);
   modalCanvas.empty();
   palette.empty();
-  let tempPixel = $("#userPixels").text();
-  userPixel = +tempPixel;
+  stampPalette.empty();
+  arr = copyArr(ensureSection(arr, Number(pos) || sectionId));
+  let tempPixelText = String($("#userPixels").text() || "").trim();
+  if (!tempPixelText) {
+    userPixels = Infinity;
+  } else {
+    let parsedPixels = Number(tempPixelText);
+    userPixels = Number.isFinite(parsedPixels) && parsedPixels > 0 ? parsedPixels : Infinity;
+  }
 
-  for (let i = 2; i < arr.length; i++) {
-    for (let n = 0; n < arr[i].length; n++) {
+  // Create a 16x16 grid of pixels
+  for (let i = 0; i < 16; i++) {
+    let rowKey = "row_" + i;
+    let rowData = arr[rowKey] || Array(16).fill("E");
+    for (let n = 0; n < 16; n++) {
       let tempDiv = document.createElement("div");
       tempDiv.className = "editPixel";
-      tempDiv.style.backgroundColor = getColor(arr[i][n]);
-      tempDiv.setAttribute("y", i);
+      setPixelVisual(tempDiv, rowData[n]);
+      tempDiv.setAttribute("y", rowKey);
       tempDiv.setAttribute("x", n);
       modalCanvas.append(tempDiv);
     }
   }
+
+  // Create color palette
   for (let i = 0; i < colors.length; i++) {
     let colorDiv = document.createElement("div");
     colorDiv.className = "color";
     colorDiv.style.backgroundColor = getColor(colors[i]);
     palette.append(colorDiv);
   }
+
+  stampEmojis.forEach(function (emoji) {
+    let stampDiv = document.createElement("div");
+    stampDiv.className = "stamp";
+    stampDiv.setAttribute("data-emoji", emoji);
+    stampDiv.textContent = emoji;
+    stampPalette.append(stampDiv);
+  });
 }
 
 //update selected color div and variable
@@ -166,31 +380,117 @@ function selectColor(color) {
   colorDiv.empty();
   let tempDiv = document.createElement("div");
   tempDiv.className = "color";
-  tempDiv.style.backgroundColor = color;
+  if (selectedStampEmoji) {
+    tempDiv.style.backgroundColor = "rgb(255, 255, 255)";
+    tempDiv.textContent = selectedStampEmoji;
+    tempDiv.style.display = "flex";
+    tempDiv.style.alignItems = "center";
+    tempDiv.style.justifyContent = "center";
+    tempDiv.style.fontSize = String(16 + selectedEmojiScale * 5) + "px";
+  } else {
+    tempDiv.style.backgroundColor = color;
+  }
   colorDiv.append(tempDiv);
 }
 
 //unpack the data from its string form
 function unpack(arr) {
   let tempArr = {};
+  
+  // We have a 4x5 grid (4 columns, 5 rows)
+  // arr contains objects with id 1-20
   for (let i = 0; i < arr.length; i++) {
-    let y = Math.floor(i / sectionCols);
-    let x = i % sectionCols;
+    let section = arr[i];
+    let id = section.id;
+    
+    // Convert database ID (1-20) to grid position (0-based)
+    // For a 4x5 grid (reading left to right, top to bottom):
+    // Row 0: IDs 1-4   (x: 0-3, y: 0)
+    // Row 1: IDs 5-8   (x: 0-3, y: 1)
+    // Row 2: IDs 9-12  (x: 0-3, y: 2)
+    // Row 3: IDs 13-16 (x: 0-3, y: 3)
+    // Row 4: IDs 17-20 (x: 0-3, y: 4)
+    let y = Math.floor((id - 1) / sectionCols);
+    let x = (id - 1) % sectionCols;
+
     let pos = y + "," + x;
-    tempArr[pos] = arr[i];
+    tempArr[pos] = section;
   }
   return tempArr;
 }
 
-//repackage the sectiona array into an object to be sent to database
+function getPosFromId(id) {
+  let numericId = Number(id);
+  if (!Number.isFinite(numericId) || numericId < 1) return null;
+  let y = Math.floor((numericId - 1) / sectionCols);
+  let x = (numericId - 1) % sectionCols;
+  return y + "," + x;
+}
+
+function applyRemoteSection(fullPic, section) {
+  let pos = getPosFromId(section.id);
+  if (!pos) return;
+
+  let normalizedSection = ensureSection(section, Number(section.id));
+  fullPic[pos] = normalizedSection;
+  renderSectionPreview(pos, normalizedSection);
+}
+
+function getSectionStateFromCanvas(sectionPos, sectionId) {
+  let sectionEl = document.getElementById(sectionPos);
+  if (!sectionEl) return null;
+  let pixels = sectionEl.querySelectorAll(".pixel");
+  if (!pixels || pixels.length !== 256) return null;
+
+  let section = { id: sectionId, canvas_id: 1 };
+  for (let row = 0; row < 16; row++) {
+    let chars = [];
+    for (let col = 0; col < 16; col++) {
+      let idx = row * 16 + col;
+      let pixel = pixels[idx];
+      let char = pixel.getAttribute("data-char");
+      if (!char) {
+        let color = window.getComputedStyle(pixel).backgroundColor;
+        char = getChar(color);
+      }
+      chars.push(char);
+    }
+    section["row_" + row] = chars.join("");
+  }
+  return section;
+}
+
+function applyRemotePreview(fullPic, message) {
+  if (!message.section_id || !message.row_key || message.x === undefined || !message.char) return;
+  let pos = getPosFromId(message.section_id);
+  if (!pos) return;
+  setSectionChar(fullPic, pos, message.row_key, message.x, message.char);
+  paintMainCanvasChar(pos, message.row_key, message.x, message.char);
+  markSectionLive(message.section_id);
+}
+
+function setSectionChar(fullPic, pos, rowKey, x, char) {
+  let section = ensureSection(fullPic[pos], getId(pos));
+  let row = (section[rowKey] || "E".repeat(16)).split("");
+  let idx = Number(x);
+  if (!Number.isFinite(idx) || idx < 0 || idx > 15) return;
+  row[idx] = char;
+  section[rowKey] = row.join("");
+  fullPic[pos] = section;
+}
+
+//repackage the section array into an object to be sent to database
 function pack(arr, pos) {
   let newObj = {};
   newObj["id"] = pos;
   newObj["canvas_id"] = 1;
-  for (var i = 0; i < arr.length - 2; i++) {
-    newObj[i] = arr[i + 2].reduce(function (acc, val) {
-      return acc + val;
-    });
+  
+  // Pack each row of pixels
+  for (let i = 0; i < 16; i++) {
+    let rowKey = "row_" + i;
+    if (arr[rowKey]) {
+      newObj[i] = arr[rowKey].join('');
+    }
   }
   return newObj;
 }
@@ -205,26 +505,183 @@ function getId(pos) {
       stringB = pos.substring(i + 1, pos.length);
     }
   }
-  if (stringA === "0") {
-    return +stringB + 1;
-  } else if (stringA === "1") {
-    return +stringB + 6;
-  } else if (stringA === "2") {
-    return +stringB + 11;
-  }
+  // Convert grid position back to section ID (1-20)
+  // Row number (y) * columns per row (4) + column number (x) + 1
+  return (+stringA * sectionCols) + (+stringB + 1);
 }
 
 //copy the array into a NEW copy
 function copyArr(arr) {
-  let newArr = [];
+  let newArr = {};
 
-  for (let i = 0; i < arr.length; i++) {
-    newArr[i] = [];
-    for (let n = 0; n < arr[i].length; n++) {
-      newArr[i][n] = arr[i][n];
+  // Copy each row
+  for (let i = 0; i < 16; i++) {
+    let rowKey = "row_" + i;
+    let rowData = arr[rowKey] || "E".repeat(16);
+    if (Array.isArray(rowData)) {
+      newArr[rowKey] = rowData.slice(0, 16);
+    } else if (typeof rowData === "string") {
+      newArr[rowKey] = rowData.split("");
+    } else {
+      newArr[rowKey] = "E".repeat(16).split("");
     }
   }
   return newArr;
+}
+
+function ensureSection(section, id) {
+  let safeSection = section || { id: id, canvas_id: 1 };
+
+  for (let i = 0; i < 16; i++) {
+    let rowKey = "row_" + i;
+    if (!safeSection[rowKey] || safeSection[rowKey].length !== 16) {
+      safeSection[rowKey] = "E".repeat(16);
+    }
+  }
+  return safeSection;
+}
+
+function buildStampMaps() {
+  let idx = 0;
+  stampEmojis.forEach(function (emoji) {
+    stampKeyByEmojiAndScale[emoji] = {};
+    for (let scale = 1; scale <= 4; scale++) {
+      let key = STAMP_KEY_POOL.charAt(idx++);
+      stampMetaByKey[key] = { emoji: emoji, scale: scale };
+      stampKeyByEmojiAndScale[emoji][scale] = key;
+    }
+  });
+}
+
+function getStampKey(emoji, scale) {
+  if (!stampKeyByEmojiAndScale[emoji]) return null;
+  return stampKeyByEmojiAndScale[emoji][scale] || stampKeyByEmojiAndScale[emoji][1];
+}
+
+function getStampMeta(char) {
+  return stampMetaByKey[char] || null;
+}
+
+function isStampChar(char) {
+  return !!getStampMeta(char);
+}
+
+function setPixelVisual(el, char) {
+  let safeChar = char || "E";
+  el.setAttribute("data-char", safeChar);
+  el.style.backgroundColor = getColor(safeChar);
+  let stampMeta = getStampMeta(safeChar);
+  let existingGlyph = el.querySelector(".stamp-glyph");
+  if (existingGlyph) {
+    existingGlyph.remove();
+  }
+
+  if (stampMeta) {
+    let baseSize = el.classList.contains("editPixel") ? 12 : 8;
+    let glyph = document.createElement("span");
+    glyph.className = "stamp-glyph";
+    glyph.textContent = stampMeta.emoji;
+    glyph.style.fontSize = String(baseSize * stampMeta.scale) + "px";
+    el.appendChild(glyph);
+  } else {
+    el.textContent = "";
+  }
+}
+
+function paintMainCanvasChar(sectionPos, rowKey, x, char) {
+  let section = document.getElementById(sectionPos);
+  if (!section) return;
+
+  let rowIndex = Number(String(rowKey).replace("row_", ""));
+  let colIndex = Number(x);
+  let pixelIndex = rowIndex * 16 + colIndex;
+  let targetPixel = section.querySelectorAll(".pixel")[pixelIndex];
+  if (targetPixel) {
+    setPixelVisual(targetPixel, char);
+  }
+}
+
+function flashSectionById(sectionId) {
+  let pos = getPosFromId(sectionId);
+  if (!pos) return;
+  let section = document.getElementById(pos);
+  if (!section) return;
+
+  section.classList.remove("section-saved-flash");
+  section.offsetWidth;
+  section.classList.add("section-saved-flash");
+  setTimeout(function () {
+    section.classList.remove("section-saved-flash");
+  }, 700);
+}
+
+function markSectionLive(sectionId) {
+  let pos = getPosFromId(sectionId);
+  if (!pos) return;
+  let section = document.getElementById(pos);
+  if (!section) return;
+
+  section.classList.add("section-live-edit");
+  if (liveEditTimers[pos]) {
+    clearTimeout(liveEditTimers[pos]);
+  }
+  liveEditTimers[pos] = setTimeout(function () {
+    clearSectionLiveIndicator(sectionId);
+  }, 1400);
+}
+
+function clearSectionLiveIndicator(sectionId) {
+  let pos = getPosFromId(sectionId);
+  if (!pos) return;
+  let section = document.getElementById(pos);
+  if (!section) return;
+
+  section.classList.remove("section-live-edit");
+  if (liveEditTimers[pos]) {
+    clearTimeout(liveEditTimers[pos]);
+    delete liveEditTimers[pos];
+  }
+}
+
+function renderSectionPreview(sectionPos, arr) {
+  let section = document.getElementById(sectionPos);
+  if (!section) return;
+
+  let pixels = section.querySelectorAll(".pixel");
+  for (let i = 0; i < 16; i++) {
+    let rowKey = "row_" + i;
+    let rowData = arr[rowKey] || [];
+    for (let n = 0; n < 16; n++) {
+      let idx = i * 16 + n;
+      if (pixels[idx]) {
+        setPixelVisual(pixels[idx], rowData[n]);
+      }
+    }
+  }
+}
+
+function packSectionForState(arr, id) {
+  let section = { id: id, canvas_id: 1 };
+  for (let i = 0; i < 16; i++) {
+    let rowKey = "row_" + i;
+    section[rowKey] = arr[rowKey].join("");
+  }
+  return section;
+}
+
+function sendPreviewPixel(sectionId, rowKey, x, char) {
+  let payload = {
+    section_id: sectionId,
+    row_key: rowKey,
+    x: x,
+    char: char,
+  };
+  $.post("/previewPixel", { json: JSON.stringify(payload) });
+}
+
+function sendPreviewReset(sectionId, sectionRowsObj) {
+  let section = pack(sectionRowsObj, sectionId);
+  $.post("/previewReset", { json: JSON.stringify({ section: section }) });
 }
 
 //post the current selectedArr to the database
@@ -301,7 +758,7 @@ function getColor(char) {
       return "rgb(255, 255, 255)";
       break;
     case "E":
-      return "rgb(196, 196, 196)";
+      return "rgb(255, 255, 255)";
       break;
     case "H":
       return "rgb(133, 86, 64)";
@@ -309,6 +766,37 @@ function getColor(char) {
     case "L":
       return "rgb(0, 0, 0)";
       break;
+    case "1":
+    case "2":
+    case "3":
+    case "4":
+    case "5":
+    case "6":
+    case "7":
+    case "8":
+    case "9":
+    case "!":
+    case "@":
+    case "#":
+    case "$":
+    case "%":
+    case "^":
+    case "&":
+    case "*":
+    case "(":
+    case ")":
+    case "-":
+    case "_":
+    case "+":
+    case "=":
+    case "[":
+    case "]":
+    case "{":
+    case "}":
+      return "rgb(255, 255, 255)";
+      break;
+    default:
+      return "rgb(255, 255, 255)";
   }
 }
 //return color from character
@@ -353,14 +841,13 @@ function getChar(color) {
     case "rgb(255, 255, 255)":
       return "W";
       break;
-    case "rgb(196, 196, 196)":
-      return "E";
-      break;
     case "rgb(133, 86, 64)":
       return "H";
       break;
     case "rgb(0, 0, 0)":
       return "L";
       break;
+    default:
+      return "E";
   }
 }
