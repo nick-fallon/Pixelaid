@@ -1,6 +1,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link
       href="https://fonts.googleapis.com/css?family=Nova+Square|VT323"
       rel="stylesheet"
@@ -8,60 +9,101 @@
     <script
       src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"
     ></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
     <link rel="stylesheet" href="./stylesheets/canvas.css" />
-    <title>Pixelaid | Canvas</title>
+    <title>Pixelaid | Live Canvas</title>
   </head>
-  <body>
-    <main>
-      <header>
-        <div class="header-logo">
-          <a href="/"><img src="../media/pixelaid-logo.svg" alt="" /></a>
-        </div>
-        <div class="nav-buttons">
-          <a href="/canvas"><button type="button">CANVAS</button></a>
-          <a href="/questions"><button type="button">QUESTIONS</button></a>
-          <a href="/kudos"><button type="button">KUDOS</button></a>
-          <a href="/logout"><button type="button">LOGOUT</button></a>
+  <body class="canvas-body">
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="/canvas">
+          <img class="brand-logo" src="../media/pixelaid-logo.svg" alt="Pixelaid" />
+          <span>LIVE BOARD</span>
+          <img class="header-wizard" src="../media/wizard.png" alt="Pixel wizard mascot" />
+        </a>
+        <div class="topbar-right">
+          <div class="topbar-chip">Realtime Local Canvas</div>
         </div>
       </header>
 
-      <div class="canvas-page-content">
-        <div id="canvasFrame"></div>
-        <div id="myModal" class="modal">
-          <div class="modalHeader">
-            <h2 id="modalPos">0,0</h2>
-            <h2>{{currentUser.name}}</h2>
-            <div>
-              <h2>Pixels:
-                <span id="userPixels">{{currentUser.pixel_count}}</span></h2>
-              <h2>Pixels Used: <span id="spendPixels"></span></h2>
-            </div>
+      <section class="hero">
+        <div class="canvas-zone">
+          <div class="canvas-head">
+            <h1>Collaborative Pixel Playground</h1>
+            <p>Tap a section, paint with drag, and watch updates appear live.</p>
           </div>
-          <div class="modalMain">
-            <div class="colorpick">
-              <p>Selected Color</p>
-              <div id="colorDiv"></div>
-            </div>
-            <div id="modalCanvas"></div>
-            <div id="palette"></div>
+          <div id="canvasFrame"></div>
+        </div>
+
+        <aside class="control-zone">
+          <div class="info-card">
+            <h2>Hello, {{currentUser.name}}</h2>
+            <p id="user-pixel">You have {{currentUser.pixel_count}} pixels</p>
+            <p>Click any board section to open the editor.</p>
+            <button id="clearBoardBtn" type="button"><i
+                class="fa fa-eraser"
+                aria-hidden="true"
+              ></i>
+              Clear Board</button>
           </div>
-          <div class="modalFooter">
-            <button id="modalCancel" class="modalBtn">Cancel</button>
-            <button id="modalClear" class="modalBtn">Clear</button>
-            <button id="modalSubmit" class="modalBtn">Submit</button>
+
+          <div class="legend-card">
+            <h3>Live Signals</h3>
+            <p><span class="dot live"></span>Dashed blue border = someone is painting</p>
+            <p><span class="dot saved"></span>Red pulse = section was just saved</p>
+          </div>
+        </aside>
+      </section>
+
+      <div id="myModal" class="modal">
+        <div class="modalHeader">
+          <div>
+            <h2>Section <span id="modalPos">0,0</span></h2>
+            <p class="muted">Paint by click + drag</p>
+          </div>
+          <div class="modalStats">
+            <h2>Pixels: <span id="userPixels">{{currentUser.pixel_count}}</span></h2>
+            <h2>Used: <span id="spendPixels"></span></h2>
           </div>
         </div>
-        <div class="user-canvas-info">
-          <h1>Hi, {{currentUser.name}}</h1>
-          <h2 id="user-pixel">You have {{currentUser.pixel_count}} pixels</h2>
-          <p><i class="fa fa-arrow-left" aria-hidden="true"></i>
-            Click section on canvas to use your pixels!</p>
-          <a href="/questions">Answer some questions to earn more pixels!</a>
-          <img src="../media/wizard.png" alt="" />
+        <div class="modalMain">
+          <div class="colorpick">
+            <p>Selected</p>
+            <div id="colorDiv"></div>
+          </div>
+          <div id="modalCanvas"></div>
+          <div class="modalTools">
+            <div id="palette"></div>
+            <div class="stampSizeControl">
+              <label for="stampSize">Brush Size</label>
+              <select id="stampSize">
+                <option value="1">1x1</option>
+                <option value="2">2x2</option>
+                <option value="3">3x3</option>
+              </select>
+            </div>
+            <div class="stampSizeControl">
+              <label for="emojiScale">Emoji Scale</label>
+              <select id="emojiScale">
+                <option value="1">1x</option>
+                <option value="2">2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+              </select>
+            </div>
+            <div id="stampPalette"></div>
+          </div>
+        </div>
+        <div class="modalFooter">
+          <button id="modalCancel" class="modalBtn">Cancel</button>
+          <button id="modalClear" class="modalBtn">Reset</button>
+          <button id="modalSubmit" class="modalBtn">Save</button>
         </div>
       </div>
     </main>
-    <script src="https://use.fontawesome.com/a620c1b288.js"></script>
     <script src="canvas.js"></script>
   </body>
 </html>

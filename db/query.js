@@ -59,6 +59,19 @@ function updateCanvas(obj) {
   });
 }
 
+function clearCanvas() {
+  const clearedSection = {};
+  for (let i = 0; i < 16; i++) {
+    clearedSection["row_" + i] = "E".repeat(16);
+  }
+
+  return pg("section")
+    .update(clearedSection)
+    .then(() => {
+      return getCanvas();
+    });
+}
+
 //subtract pixels from user total
 function subtractPixels(data, id, pixel) {
   let temp = data["json"];
@@ -143,6 +156,7 @@ module.exports = {
   giveKudo,
   addPixel,
   subtractPixels,
+  clearCanvas,
   getUsers,
   kudoPoints,
 };
